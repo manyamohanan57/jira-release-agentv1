@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from app.assessment import assess_release, assess_release_context
 from app.importer import import_dataset
@@ -11,6 +11,7 @@ from app.models import (
     ReleaseReadinessReport,
 )
 from app.models import MANDATORY_REQUIREMENTS
+from app.report_renderer import render_csv_report, render_markdown_report
 from app.storage import AssessmentStore
 
 app = FastAPI(
@@ -114,6 +115,38 @@ def export_assessment(assessment_id: str) -> JSONResponse:
         headers={
             "Content-Disposition": (
                 f'attachment; filename="release-assessment-{report.report_id}.json"'
+            )
+        },
+    )
+
+
+@app.get("/assessment/{assessment_id}/markdown")
+def export_assessment_markdown(assessment_id: str) -> Response:
+    report = store.get(assessment_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="Assessment not found.")
+    return Response(
+        content=render_markdown_report(report),
+        media_type="text/markdown; charset=utf-8",
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="release-assessment-{report.report_id}.md"'
+            )
+        },
+    )
+
+
+@app.get("/assessment/{assessment_id}/csv")
+def export_assessment_csv(assessment_id: str) -> Response:
+    report = store.get(assessment_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="Assessment not found.")
+    return Response(
+        content=render_csv_report(report),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="release-assessment-{report.report_id}.csv"'
             )
         },
     )

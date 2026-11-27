@@ -57,6 +57,7 @@ class EvidenceItem(BaseModel):
     evidence_details: str
     source_type: str = "Jira"
     comment_id: str | None = None
+    source_identifier: str | None = None
 
 
 class RequirementResult(BaseModel):
@@ -66,7 +67,7 @@ class RequirementResult(BaseModel):
     reasoning: str
     evidence: list[EvidenceItem] = Field(default_factory=list)
     missing_evidence: list[str] = Field(default_factory=list)
-    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     mandatory: bool = True
 
 

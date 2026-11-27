@@ -49,3 +49,56 @@ def test_assessment_export_returns_saved_report_json(
     assert response.status_code == 200
     assert response.json()["report_id"] == "test-report"
     assert "release-assessment-test-report.json" in response.headers["content-disposition"]
+
+
+def test_assessment_markdown_export_returns_a_table(monkeypatch) -> None:
+    report = ReleaseReadinessReport(
+        report_id="test-report",
+        requirements=[
+            {
+                "requirement_id": "REQ-05",
+                "requirement_name": "Model Usage Cost",
+                "status": "FAIL",
+                "reasoning": "Observed value exceeded threshold.",
+                "evidence": [
+                    {
+                        "issue_key": "KAN-383",
+                        "source_identifier": "REC-5716",
+                        "comment_id": "11896",
+                        "source_type": "Jira comment",
+                        "summary": "Cost run",
+                        "evidence_details": "Measured USD 0.018.",
+                    }
+                ],
+                "missing_evidence": [],
+                "confidence": None,
+            }
+        ],
+        usage=UsageMetrics(execution_time_ms=123),
+        generated_at=datetime.now(timezone.utc),
+    )
+    monkeypatch.setattr(main.store, "get", lambda _assessment_id: report)
+
+    response = TestClient(app).get("/assessment/test-report/markdown")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/markdown")
+    assert "| Requirement | Status | Assessment | Jira evidence | Missing evidence | Confidence |" in response.text
+    assert "KAN-383" in response.text
+    assert "REC-5716" in response.text
+
+
+def test_assessment_csv_export_returns_a_download(monkeypatch) -> None:
+    report = ReleaseReadinessReport(
+        report_id="test-report",
+        usage=UsageMetrics(execution_time_ms=123),
+        generated_at=datetime.now(timezone.utc),
+    )
+    monkeypatch.setattr(main.store, "get", lambda _assessment_id: report)
+
+    response = TestClient(app).get("/assessment/test-report/csv")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/csv")
+    assert "release-assessment-test-report.csv" in response.headers["content-disposition"]
+    assert response.text.startswith("Requirement,Status,Assessment")

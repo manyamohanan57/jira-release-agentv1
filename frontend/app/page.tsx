@@ -13,10 +13,11 @@ type Requirement = {
     evidence_details: string;
     source_type: string;
     comment_id?: string;
+    source_identifier?: string | null;
     summary: string;
   }>;
   missing_evidence: string[];
-  confidence: number;
+  confidence?: number | null;
 };
 
 type Report = {
@@ -152,6 +153,15 @@ export default function Home() {
             <span>{report.tool_trace.length} Jira tool calls</span>
           </div>
           <p>{report.assessment_summary}</p>
+          <p>
+            <a href={`${API_URL}/assessment/${encodeURIComponent(report.report_id)}/markdown`}>
+              Download Markdown report
+            </a>
+            {" | "}
+            <a href={`${API_URL}/assessment/${encodeURIComponent(report.report_id)}/csv`}>
+              Download CSV report
+            </a>
+          </p>
 
           <div className="tableWrap">
             <table className="resultsTable">
@@ -185,6 +195,12 @@ export default function Home() {
                           {requirement.evidence.map((item) => (
                             <li key={`${item.issue_key}-${item.comment_id ?? item.summary}`}>
                               <strong>{item.issue_key}</strong>
+                              {item.source_identifier && (
+                                <small>Evidence record {item.source_identifier}</small>
+                              )}
+                              {!item.source_identifier && (
+                                <small>Evidence record ID unavailable</small>
+                              )}
                               {item.comment_id && <small>Comment {item.comment_id}</small>}
                               <details>
                                 <summary>{item.summary}</summary>
@@ -208,7 +224,11 @@ export default function Home() {
                         <span className="muted">None</span>
                       )}
                     </td>
-                    <td>{Math.round(requirement.confidence * 100)}%</td>
+                    <td>
+                      {typeof requirement.confidence === "number"
+                        ? `${Math.round(requirement.confidence * 100)}%`
+                        : "Not calculated"}
+                    </td>
                   </tr>
                 ))}
               </tbody>

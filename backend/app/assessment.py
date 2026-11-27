@@ -310,6 +310,14 @@ def _requirement_candidates(
     return candidates
 
 
+def _is_requirement_definition(issue: dict[str, Any]) -> bool:
+    fields = issue.get("fields", {})
+    issue_type = jira_text((fields.get("issuetype") or {}).get("name", "")).lower()
+    description = jira_text(fields.get("description", ""))
+    kind_match = re.search(r"(?im)^\s*kind\s*:\s*requirement\s*$", description)
+    return issue_type == "requirement" or kind_match is not None
+
+
 def _target_service_candidates(
     candidates_by_requirement: dict[str, list[dict[str, Any]]],
     service: str,
@@ -321,13 +329,17 @@ def _target_service_candidates(
             for issues in candidates_by_requirement.values()
             for issue in issues
             if issue.get("key")
-            and target
-            in " ".join(
-                (
-                    jira_text(issue.get("fields", {}).get("summary", "")),
-                    jira_text(issue.get("fields", {}).get("description", "")),
-                )
-            ).lower()
+            and not _is_requirement_definition(issue)
+            and (
+                target
+                in " ".join(
+                    (
+                        jira_text(issue.get("fields", {}).get("summary", "")),
+                        jira_text(issue.get("fields", {}).get("description", "")),
+                    )
+                ).lower()
+                or bool(_source_identifiers(issue)[0])
+            )
         }.values()
     )
 
@@ -341,6 +353,8 @@ def _select_agent_candidates(
     for issues in candidates_by_requirement.values():
         matching = []
         for issue in issues:
+            if _is_requirement_definition(issue):
+                continue
             fields = issue.get("fields", {})
             text = " ".join(
                 (
@@ -348,15 +362,32 @@ def _select_agent_candidates(
                     jira_text(fields.get("description", "")),
                 )
             ).lower()
-            if service.lower() not in text or release.lower() not in text:
-                continue
             kind = jira_text(fields.get("description", "")).lower()
-            priority = 0 if "kind: evidence" in kind else 1
+            has_target_context = (
+                service.lower() in text and release.lower() in text
+            )
+            priority = (
+                0 if re.search(r"\bkind\s*:\s*evidence\b", kind) else 1,
+                0 if has_target_context else 1,
+            )
             matching.append((priority, issue))
         matching.sort(key=lambda item: item[0])
         for _, issue in matching[:1]:
             selected[str(issue["key"])] = issue
     return list(selected.values())
+
+
+def _requirement_definition_records(
+    candidates_by_requirement: dict[str, list[dict[str, Any]]],
+) -> list[dict[str, Any]]:
+    return list(
+        {
+            str(issue["key"]): issue
+            for issues in candidates_by_requirement.values()
+            for issue in issues
+            if issue.get("key") and _is_requirement_definition(issue)
+        }.values()
+    )
 
 
 def _fetch_candidate_comments(
@@ -451,6 +482,9 @@ def assess_release_context(
             )
 
         candidates_by_requirement = _requirement_candidates(scoped_issues)
+        requirement_definitions = _requirement_definition_records(
+            candidates_by_requirement
+        )
         assessment_candidates = _target_service_candidates(
             candidates_by_requirement,
             service,
@@ -459,7 +493,8 @@ def assess_release_context(
             assessment_candidates = [
                 issue
                 for issue in scoped_issues
-                if service.lower()
+                if not _is_requirement_definition(issue)
+                and service.lower()
                 in " ".join(
                     (
                         jira_text(issue.get("fields", {}).get("summary", "")),
@@ -502,13 +537,19 @@ def assess_release_context(
 
         for issue in assessment_candidates:
             records.setdefault(str(issue["key"]), issue)
+        for issue in requirement_definitions:
+            records.setdefault(str(issue["key"]), issue)
 
         already_fetched = {
             str(trace.arguments.get("issue_key"))
             for trace in agent_traces
             if trace.tool == "get_jira_comments"
         }
-        unique_records = list(records.values())
+        unique_records = [
+            issue
+            for issue in records.values()
+            if not _is_requirement_definition(issue)
+        ]
         comment_tool = next(tool for tool in tools if tool.name == "get_jira_comments")
         traces.extend(
             _fetch_candidate_comments(unique_records, comment_tool, already_fetched)

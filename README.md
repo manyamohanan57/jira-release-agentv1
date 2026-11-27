@@ -15,7 +15,7 @@ A Next.js and FastAPI application that assesses software-release requirements us
 2. Start the backend and frontend as described below.
 3. Assess a release using its Jira project key, dataset label, and target release. The backend searches the scoped Jira dataset, then runs a LangChain tool-calling investigation over relevant Jira comments and linked issues.
 
-The model investigates evidence; a deterministic decision engine applies thresholds and calculates the overall release status. Reports include Jira issue/comment references, missing evidence, confidence, tool traces, and model usage. The frontend displays the requirement results in a readable, horizontally scrollable table. Jira descriptions and comments are treated as untrusted input.
+The model investigates evidence; a deterministic decision engine applies thresholds and calculates the overall release status. Reports include Jira issue/comment references, source record IDs when present, missing evidence, tool traces, and model usage. Confidence is shown as "Not calculated" rather than using an unsupported fixed score. The frontend displays the requirement results in a readable, horizontally scrollable table. Jira descriptions and comments are treated as untrusted input.
 
 If Jira returns HTTP 401, create a new Atlassian API token and update `JIRA_EMAIL` and `JIRA_API_TOKEN` in `backend/.env`.
 
@@ -79,12 +79,20 @@ Jira's native authorship and timestamps remain those of the importing account.
 `POST /assessment/run` returns a `report_id`, decisions, Jira evidence references, the
 investigation trace, execution time, and token counts when the model provider supplies
 them. The agent's tool-call activity is also logged in the backend terminal. Download a
-saved report as JSON with:
+saved report as JSON, Markdown, or CSV with:
 
 ```powershell
 Invoke-WebRequest `
     -Uri "http://localhost:8000/assessment/REPORT_ID/export" `
     -OutFile "..\reports\release-assessment.json"
+
+Invoke-WebRequest `
+    -Uri "http://localhost:8000/assessment/REPORT_ID/markdown" `
+    -OutFile "..\reports\release-assessment.md"
+
+Invoke-WebRequest `
+    -Uri "http://localhost:8000/assessment/REPORT_ID/csv" `
+    -OutFile "..\reports\release-assessment.csv"
 ```
 
 ### Design and known limits
