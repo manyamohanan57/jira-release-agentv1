@@ -1,5 +1,7 @@
 $ErrorActionPreference = "Stop"
 
+Set-Location $PSScriptRoot
+
 $python = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
 if (-not (Test-Path $python)) {
     & py -3.12 -m venv (Join-Path $PSScriptRoot ".venv")

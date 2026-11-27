@@ -140,6 +140,12 @@ button:disabled {
   font-size: 14px;
 }
 
+.reportContext {
+  margin: 8px 0 0;
+  color: #666;
+  font-size: 13px;
+}
+
 .ready,
 .pass {
   background: #daf5df;
@@ -200,6 +206,86 @@ button:disabled {
 
 .evidence small {
   color: #777;
+}
+
+.tableWrap {
+  margin-top: 20px;
+  overflow-x: auto;
+  border: 1px solid #dde1e7;
+  border-radius: 10px;
+}
+
+.resultsTable {
+  width: 100%;
+  min-width: 1050px;
+  border-collapse: collapse;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.resultsTable th,
+.resultsTable td {
+  padding: 14px;
+  border-bottom: 1px solid #e7e9ed;
+  text-align: left;
+  vertical-align: top;
+}
+
+.resultsTable thead th {
+  position: sticky;
+  top: 0;
+  background: #f5f6f8;
+  color: #4b5260;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.resultsTable tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+.resultsTable tbody th[scope="row"] {
+  min-width: 175px;
+  font-weight: 400;
+}
+
+.resultsTable tbody th[scope="row"] strong,
+.resultsTable tbody th[scope="row"] small {
+  display: block;
+  margin-top: 5px;
+}
+
+.resultsTable tbody th[scope="row"] small,
+.tableList small,
+.muted {
+  color: #777;
+  font-size: 12px;
+}
+
+.tableList {
+  min-width: 180px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.tableList li + li {
+  margin-top: 10px;
+}
+
+.tableList details {
+  margin-top: 4px;
+}
+
+.tableList summary {
+  cursor: pointer;
+  color: #555;
+}
+
+.tableList p {
+  margin: 5px 0 0;
+  color: #666;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 800px) {
